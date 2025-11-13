@@ -1,124 +1,231 @@
-# Leetcode TestKit
+# LeetCode TestKit
 
-A simple and powerful header-only C++ testing framework for Leetcode-style problems. Quickly test your solutions using the examples provided in problem statements.
+A comprehensive C++ testing framework designed specifically for LeetCode problem solutions. This header-only library provides powerful testing utilities with beautiful console output and extensive type support.
 
 ## Features
 
-- 🚀 **Header-only** - Just include one file and you're ready to go
-- 🎨 **Colorful output** - Easy-to-read test results with green/red indicators
-- 📝 **Multiple function signatures** - Support for various parameter combinations
-- 🏗️ **Class method testing** - Perfect for Leetcode's `Solution` class format
-- 🔧 **Flexible templates** - Works with any input/output types
-- 📊 **Detailed reporting** - Shows input, output, expected results, and pass/fail counts
+- 🧪 **Easy Test Creation** - Simple API for defining test cases and running solutions
+- 🎨 **Colorful Output** - Clear pass/fail indicators with colored console output
+- 📦 **Comprehensive Type Support** - Automatic pretty-printing for:
+  - Primitive types (int, double, bool, etc.)
+  - STL containers (vector, list, deque, set, map, etc.)
+  - Strings and C-style strings
+  - Pairs and tuples
+  - Optional values
+  - Custom types (with stream support)
+- 🔧 **Flexible Testing** - Support for:
+  - Single-parameter functions
+  - Two-parameter functions  
+  - Class methods
+- 🚀 **Header-Only** - Just include and use, no compilation needed
 
 ## Quick Start
 
-1. **Add the header to your project:**
 ```cpp
 #include "leetcode_testkit.h"
-```
+#include <vector>
 
-2. **Create your solution:**
-```cpp
-class Solution {
-public:
-    vector<int> twoSum(vector<int>& nums, int target) {
-        // Your implementation here
-    }
-};
-```
+// Example: Testing a two-sum like function
+std::vector<int> twoSum(std::vector<int>& nums, int target) {
+    // Your solution here
+}
 
-3. **Test with examples:**
-```cpp
 int main() {
-    Solution solution;
-
-    TestClassMethod<Solution, vector<int>, int, vector<int>>(
-        "Two Sum",
-        &solution,
-        &Solution::twoSum,
-        {
-            { {{2, 7, 11, 15}, 9}, {0, 1} },
-            { {{3, 2, 4}, 6}, {1, 2} },
-            { {{3, 3}, 6}, {0, 1} },
-            { {{1, 2, 3}, 10}, {} }
-        }
-    );
-
+    TestSolution("Two Sum", twoSum, {
+        {{{2, 7, 11, 15}, 9}, {0, 1}},
+        {{{3, 2, 4}, 6}, {1, 2}},
+        {{{3, 3}, 6}, {0, 1}}
+    });
+    
     return 0;
 }
 ```
 
+## Installation
+
+Simply copy `leetcode_testkit.h` into your project and include it:
+
+```cpp
+#include "leetcode_testkit.h"
+```
+
+No additional dependencies required (uses C++11 standard library).
+
 ## Usage Examples
 
-### Testing Single Parameter Functions
+### Testing Single-Parameter Functions
+
 ```cpp
-// For problems like: bool isPalindrome(int x)
-TestSolution("Palindrome Number",
-    [](int x) { return solution(x); },
-    {
-        {121, true},
-        {-121, false},
-        {10, false}
-    }
-);
+int square(int x) {
+    return x * x;
+}
+
+int main() {
+    TestSolution("Square function", square, {
+        {2, 4},
+        {5, 25},
+        {-3, 9},
+        {0, 0}
+    });
+}
 ```
 
-### Testing Vector Solutions
+### Testing Two-Parameter Functions
+
 ```cpp
-// Specialized output for vector problems
-TestVectorSolution("Find Max",
-    findMax,
-    {
-        {{1, 2, 3, 4, 5}, 5},
-        {{-1, -2, -3}, -1},
-        {{42}, 42}
-    }
-);
+int add(int a, int b) {
+    return a + b;
+}
+
+int main() {
+    TestSolution("Add function", add, {
+        {{{2, 3}, 5}},
+        {{{-1, 1}, 0}},
+        {{{10, -5}, 5}}
+    });
+}
 ```
 
-### Testing Class Methods Directly
+### Testing Class Methods
+
 ```cpp
-Solution sol;
-TestClassMethod("Two Sum (Class Method)",
-    &sol, 
-    &Solution::twoSum,
-    {
-        {{{2,7,11,15}, 9}, {0,1}},
-        {{{3,2,4}, 6}, {1,2}}
+class Calculator {
+public:
+    int multiply(int a, int b) {
+        return a * b;
     }
-);
+};
+
+int main() {
+    Calculator calc;
+    TestClassMethod("Multiply method", &calc, &Calculator::multiply, {
+        {{{4, 5}, 20}},
+        {{{-2, 3}, -6}},
+        {{{0, 100}, 0}}
+    });
+}
 ```
 
-## Available Testing Functions
+## Supported Data Types
 
-- `TestSolution()` - General purpose, 1 or 2 parameters
-- `TestVectorSolution()` - Specialized for vector inputs
-- `TestTwoParamSolution()` - For two-parameter functions with custom output
-- `TestClassMethod()` - Direct class method testing
-- `PrintVector()` - Utility for pretty vector printing
+The library automatically handles pretty-printing for:
+
+- **Primitives**: `int`, `double`, `bool`, `char`, etc.
+- **Strings**: `std::string`, `const char*`
+- **Containers**: 
+  - Sequence: `vector`, `list`, `deque`, `forward_list`
+  - Associative: `map`, `set`, `unordered_map`, `unordered_set`
+- **Utility**: `pair`, `tuple`, `optional`
+- **Custom Types**: Any type with `operator<<` support
+
+### Example Outputs
+
+```cpp
+std::vector<int> vec = {1, 2, 3};
+// Prints: [1, 2, 3]
+
+std::map<std::string, int> m = {{"a", 1}, {"b", 2}};
+// Prints: {"a": 1, "b": 2}
+
+std::pair<int, std::string> p = {42, "answer"};
+// Prints: (42, "answer")
+
+std::optional<int> opt = 5;
+// Prints: optional(5)
+```
+
+## API Reference
+
+### Main Testing Functions
+
+```cpp
+// Single parameter functions
+template <typename Input, typename Output, typename SolutionFunc>
+void TestSolution(const std::string& testName, 
+                 SolutionFunc solution,
+                 const std::vector<std::pair<Input, Output>>& testCases);
+
+// Two parameter functions  
+template <typename Input1, typename Input2, typename Output, typename SolutionFunc>
+void TestSolution(const std::string& testName,
+                 SolutionFunc solution,
+                 const std::vector<std::pair<std::pair<Input1, Input2>, Output>>& testCases);
+
+// Class methods
+template <typename ClassType, typename Input1, typename Input2, typename Output, typename Method>
+void TestClassMethod(const std::string& testName,
+                    ClassType* obj,
+                    Method method,
+                    const std::vector<std::pair<std::pair<Input1, Input2>, Output>>& testCases);
+```
+
+### Utility Functions
+
+```cpp
+// Convert any supported type to string for debugging
+template <typename T>
+std::string ToString(const T& value);
+
+// Print vector (legacy compatibility)
+template <typename T>
+void PrintVector(const std::vector<T>& vec);
+```
+
+## Complete Example
+
+```cpp
+#include "leetcode_testkit.h"
+#include <vector>
+#include <unordered_map>
+
+// LeetCode problem solution
+std::vector<int> twoSum(std::vector<int>& nums, int target) {
+    std::unordered_map<int, int> num_map;
+    for (int i = 0; i < nums.size(); ++i) {
+        int complement = target - nums[i];
+        if (num_map.find(complement) != num_map.end()) {
+            return {num_map[complement], i};
+        }
+        num_map[nums[i]] = i;
+    }
+    return {};
+}
+
+int main() {
+    // Test the solution
+    TestSolution("Two Sum", twoSum, {
+        {{{2, 7, 11, 15}, 9}, {0, 1}},
+        {{{3, 2, 4}, 6}, {1, 2}},
+        {{{3, 3}, 6}, {0, 1}},
+        {{{1, 2, 3}, 10}, {}}  // No solution case
+    });
+
+    return 0;
+}
+```
 
 ## Sample Output
 
 ```
 Testing Two Sum:
 --------------------------------------------------------------------
-Test 1: PASSED nums = [2,7,11,15], target = 9 -> Output: [0,1] Expected: [0,1]
-Test 2: PASSED nums = [3,2,4], target = 6 -> Output: [1,2] Expected: [1,2]
-Test 3: PASSED nums = [3,3], target = 6 -> Output: [0,1] Expected: [0,1]
+Test 1: PASSED Input: [[2, 7, 11, 15], 9] Output: [0, 1] Expected: [0, 1]
+Test 2: PASSED Input: [[3, 2, 4], 6] Output: [1, 2] Expected: [1, 2]
+Test 3: PASSED Input: [[3, 3], 6] Output: [0, 1] Expected: [0, 1]
+Test 4: PASSED Input: [[1, 2, 3], 10] Output: [] Expected: []
 --------------------------------------------------------------------
-Result: 3/3 tests passed
+Result: 4/4 tests passed
 All tests PASSED! ✓
 ```
 
 ## Requirements
 
 - C++11 or later
-- Standard library (`<iostream>`, `<vector>`, `<string>`, `<cassert>`)
+- Standard Library
 
-## Why Use Leetcode TestKit?
+## Contributing
 
-- **Save Time** - No more manual test case checking
-- **Avoid Mistakes** - Automated comparison eliminates human error
-- **Rapid Iteration** - Test multiple solutions quickly
-- **Professional Workflow** - Structured testing similar to real development
+Feel free to extend the library with additional features:
+- More container types
+- Custom comparators
+- Performance timing
