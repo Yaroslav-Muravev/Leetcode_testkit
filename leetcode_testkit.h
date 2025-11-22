@@ -55,7 +55,7 @@ struct is_iterable<T, std::void_t<decltype(std::begin(std::declval<T>())),
                                   decltype(std::end(std::declval<T>()))>>
     : std::integral_constant<bool, !is_string<T>::value && !is_map_like<T>::value> {};
 
-// is_streamable: check if oss << t is valid (exclude strings so they use their own overload)
+// is_streamable: check if oss << t is valid
 template <typename T, typename = void>
 struct is_streamable : std::false_type {};
 
@@ -64,6 +64,10 @@ struct is_streamable<T, std::void_t<decltype(std::declval<std::ostream&>() << st
     : std::true_type {};
 
 // ----------------- ToString overloads (mutually exclusive) -----------------
+
+// forward declaration of generic ToString so dependent calls inside detail::ToStringElement compile
+template <typename T>
+std::string ToString(const T& v);
 
 // C-style strings
 inline std::string ToString(const char* s) {
@@ -117,52 +121,55 @@ std::string ToString(const std::tuple<Ts...>& t) {
     return detail::TupleToStringImpl(t, std::index_sequence_for<Ts...>{});
 }
 
-// Map-like containers: {k: v, ...}
-template <typename Map>
-std::enable_if_t<is_map_like<Map>::value, std::string> ToString(const Map& m) {
-    std::ostringstream oss;
-    oss << "{";
-    bool first = true;
-    for (const auto& kv : m) {
-        if (!first) oss << ", ";
-        first = false;
-        oss << ToString(kv.first) << ": " << ToString(kv.second);
+// helper for printing a single element in a container (deterministic)
+namespace detail {
+    template <typename U>
+    std::string ToStringElement(const U& x) {
+        if constexpr (std::is_same_v<U, bool>) {
+            return ::ToString(x);
+        } else if constexpr (std::is_integral_v<U>) {
+            return std::to_string(x);
+        } else {
+            // explicitly call global ToString to avoid lookup issues
+            return ::ToString(x);
+        }
     }
-    oss << "}";
-    return oss.str();
 }
 
-// Iterable containers (vector, list, deque, set, unordered_set, forward_list, etc.) excluding strings and map-like
+// --- Single universal template that dispatches by traits to avoid conflicting overloads ---
 template <typename T>
-std::enable_if_t<is_iterable<T>::value, std::string> ToString(const T& cont) {
-    std::ostringstream oss;
-    oss << "[";
-    auto it = std::begin(cont);
-    auto end_it = std::end(cont);
-    bool first = true;
-    for (; it != end_it; ++it) {
+std::string ToString(const T& v) {
+    if constexpr (is_map_like<T>::value) {
+        std::ostringstream oss;
+        oss << "{";
+        bool first = true;
+        for (const auto& kv : v) {
             if (!first) oss << ", ";
-        first = false;
-        oss << ToString(*it);
+            first = false;
+            oss << ToString(kv.first) << ": " << ToString(kv.second);
+        }
+        oss << "}";
+        return oss.str();
+    } else if constexpr (is_iterable<T>::value) {
+        std::ostringstream oss;
+        oss << "[";
+        auto it = std::begin(v);
+        auto end_it = std::end(v);
+        bool first = true;
+        for (; it != end_it; ++it) {
+            if (!first) oss << ", ";
+            first = false;
+            oss << detail::ToStringElement(*it);
+        }
+        oss << "]";
+        return oss.str();
+    } else if constexpr (!is_pair<T>::value && is_streamable<T>::value && !is_string<T>::value) {
+        std::ostringstream oss;
+        oss << v;
+        return oss.str();
+    } else {
+        return "<unprintable>";
     }
-    oss << "]";
-    return oss.str();
-}
-
-// Streamable fallback: types that support operator<< (int, double, etc.), but not strings/maps/iterables
-template <typename T>
-std::enable_if_t<!is_pair<T>::value && !is_iterable<T>::value && !is_map_like<T>::value && is_streamable<T>::value && !is_string<T>::value, std::string>
-ToString(const T& v) {
-    std::ostringstream oss;
-    oss << v;
-    return oss.str();
-}
-
-// Final fallback for unprintable types
-template <typename T>
-std::enable_if_t<!is_pair<T>::value && !is_iterable<T>::value && !is_map_like<T>::value && !is_streamable<T>::value && !is_string<T>::value, std::string>
-ToString(const T& /*v*/) {
-    return "<unprintable>";
 }
 
 // ----------------- testing functions -----------------
@@ -288,3 +295,4 @@ void TestClassMethod(const std::string& testName, ClassType* obj, Method method,
     }
     std::cout << std::endl;
 }
+
